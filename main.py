@@ -1,17 +1,22 @@
 import telebot
 import sqlite3
+import random
+import string
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from datetime import datetime
+import time
 import os
 
+# ================== AYARLAR ==================
 TOKEN = os.getenv("TOKEN") or "8900271780:AAGJ--CtEgxPbQcMJ1mspBxbTd1ZZ3iH6p8"
-
-bot = telebot.TeleBot(TOKEN)
-
 MINI_APP_URL = "https://www.porno80.net/"   
+
 CHANNEL_USERNAME = "@pxrno80duyuru"      
 GROUP_USERNAME = "@atattv44yedek"        
+
 ADMIN_IDS = [8064250098]             
+
+bot = telebot.TeleBot(TOKEN)
 
 # ================== VERİTABANI ==================
 conn = sqlite3.connect('bot.db', check_same_thread=False)
@@ -104,7 +109,7 @@ Merhaba {first_name}!
 
     bot.send_message(message.chat.id, text, parse_mode='Markdown', reply_markup=markup)
 
-# ================== CALLBACK HANDLER ==================
+# ================== CALLBACKS ==================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.from_user.id
@@ -115,9 +120,23 @@ def callback_handler(call):
             return
 
         bot.answer_callback_query(call.id)
+
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎥 Mini Uygulamayı Aç", web_app=WebAppInfo(url=MINI_APP_URL)))
-        bot.send_message(call.message.chat.id, "✅ Erişim onaylandı!\nAşağıdaki butona basarak uygulamayı açabilirsiniz:", reply_markup=markup)
+
+        # Butonlu mesajı gönder
+        sent_msg = bot.send_message(
+            call.message.chat.id, 
+            "✅ Erişim onaylandı!\nAşağıdaki butona basarak uygulamayı açabilirsiniz:", 
+            reply_markup=markup
+        )
+
+        # 40 saniye sonra mesajı otomatik sil
+        time.sleep(40)
+        try:
+            bot.delete_message(call.message.chat.id, sent_msg.message_id)
+        except:
+            pass  # Zaten silinmişse hata verme
 
     elif call.data == "user_info":
         c.execute("SELECT is_vip FROM users WHERE user_id=?", (user_id,))
@@ -131,7 +150,7 @@ Durum: {status}
 ID: `{user_id}`""", parse_mode='Markdown')
 
     # ================== ADMIN CALLBACKS ==================
-    elif call.data in ["stats", "export_users", "broadcast", "send_to_user", "banned_users", "back_to_admin"] or call.data.startswith("unban_"):
+    elif call.data.startswith("admin_") or call.data in ["stats", "export_users", "broadcast", "send_to_user", "banned_users"] or call.data.startswith("unban_") or call.data == "back_to_admin":
         if not is_admin(call.from_user.id):
             return
 
@@ -156,11 +175,14 @@ ID: `{user_id}`""", parse_mode='Markdown')
             users = c.fetchall()
             if not users:
                 return bot.send_message(call.message.chat.id, "Henüz kullanıcı yok.")
+            
             text = "UserID,Username,FirstName,VIP,Banned,JoinDate\n"
             for u in users:
                 text += f"{u[0]},{u[1] or ''},{u[2] or ''},{u[3]},{u[4]},{u[5]}\n"
+            
             with open("users_export.csv", "w", encoding="utf-8") as f:
                 f.write(text)
+            
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton("🔙 Admin Menü", callback_data="back_to_admin"))
             bot.send_document(call.message.chat.id, open("users_export.csv", "rb"), caption="✅ Tüm kullanıcılar export edildi.", reply_markup=markup)
@@ -168,15 +190,19 @@ ID: `{user_id}`""", parse_mode='Markdown')
         elif call.data == "banned_users":
             c.execute("SELECT user_id, username, first_name FROM users WHERE is_banned=1")
             banned = c.fetchall()
+            
             if not banned:
                 markup = InlineKeyboardMarkup()
                 markup.add(InlineKeyboardButton("🔙 Admin Menü", callback_data="back_to_admin"))
                 return bot.send_message(call.message.chat.id, "✅ Banlı kullanıcı bulunmuyor.", reply_markup=markup)
+            
             text = "⛔ **Banlı Kullanıcılar**\n\n"
             markup = InlineKeyboardMarkup(row_width=1)
+            
             for b in banned:
                 text += f"• `{b[0]}` | @{b[1] or 'NoUsername'}\n"
                 markup.add(InlineKeyboardButton(f"Unban: {b[0]}", callback_data=f"unban_{b[0]}"))
+            
             markup.add(InlineKeyboardButton("🔙 Admin Menü", callback_data="back_to_admin"))
             bot.send_message(call.message.chat.id, text, parse_mode='Markdown', reply_markup=markup)
 
@@ -192,6 +218,17 @@ ID: `{user_id}`""", parse_mode='Markdown')
         elif call.data == "back_to_admin":
             admin_panel(call.message)
 
+        elif call.data == "broadcast":
+            markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+            markup.add(KeyboardButton("📝 Sadece Metin"))
+            markup.add(KeyboardButton("🖼 Fotoğraf + Metin"))
+            markup.add(KeyboardButton("🎥 Video + Metin"))
+            bot.send_message(call.message.chat.id, "📢 Duyuru türünü seçin:", reply_markup=markup)
+
+        elif call.data == "send_to_user":
+            bot.send_message(call.message.chat.id, "🔸 Mesaj göndermek istediğin kullanıcı ID'sini yaz:")
+            bot.register_next_step_handler(call.message, process_user_id_for_message)
+
 # ================== ADMIN PANEL ==================
 @bot.message_handler(commands=['admin'])
 def admin_panel(message):
@@ -200,11 +237,58 @@ def admin_panel(message):
 
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(InlineKeyboardButton("📊 İstatistik", callback_data="stats"))
+    markup.add(InlineKeyboardButton("👥 Tüm Üyeler", callback_data="admin_users_0"))
     markup.add(InlineKeyboardButton("⛔ Banlı Listesi", callback_data="banned_users"))
     markup.add(InlineKeyboardButton("📤 Export Kullanıcılar", callback_data="export_users"))
+    markup.add(InlineKeyboardButton("✉️ Özel Mesaj", callback_data="send_to_user"))
     markup.add(InlineKeyboardButton("📢 Toplu Duyuru", callback_data="broadcast"))
 
     bot.send_message(message.chat.id, "🛠 **Admin Paneli**", reply_markup=markup)
+
+# ================== DİĞER FONKSİYONLAR ==================
+@bot.message_handler(func=lambda m: m.text in ["📝 Sadece Metin", "🖼 Fotoğraf + Metin", "🎥 Video + Metin"])
+def broadcast_type_selected(message):
+    if not is_admin(message.from_user.id):
+        return
+    bot.send_message(message.chat.id, "Şimdi duyuru içeriğini gönder (metin, fotoğraf veya video):")
+    bot.register_next_step_handler(message, lambda m: send_broadcast(m, message.text))
+
+def send_broadcast(message, broadcast_type):
+    if not is_admin(message.from_user.id):
+        return
+    try:
+        c.execute("SELECT user_id FROM users WHERE is_banned=0")
+        users = c.fetchall()
+        sent = 0
+        for user in users:
+            try:
+                if broadcast_type == "📝 Sadece Metin":
+                    bot.send_message(user[0], message.text)
+                elif broadcast_type == "🖼 Fotoğraf + Metin" and message.photo:
+                    bot.send_photo(user[0], message.photo[-1].file_id, caption=message.caption or "")
+                elif broadcast_type == "🎥 Video + Metin" and message.video:
+                    bot.send_video(user[0], message.video.file_id, caption=message.caption or "")
+                sent += 1
+            except:
+                continue
+        bot.send_message(message.chat.id, f"✅ Duyuru {sent} kullanıcıya gönderildi.")
+    except:
+        bot.send_message(message.chat.id, "❌ Duyuru gönderilirken hata oluştu.")
+
+def process_user_id_for_message(message):
+    try:
+        target_id = int(message.text)
+        bot.send_message(message.chat.id, f"✅ ID: `{target_id}`\nŞimdi göndermek istediğin mesajı yaz:", parse_mode='Markdown')
+        bot.register_next_step_handler(message, lambda m: send_private_message(m, target_id))
+    except:
+        bot.send_message(message.chat.id, "❌ Geçersiz ID!")
+
+def send_private_message(message, user_id):
+    try:
+        bot.forward_message(user_id, message.chat.id, message.id)
+        bot.send_message(message.chat.id, "✅ Mesaj başarıyla gönderildi!")
+    except:
+        bot.send_message(message.chat.id, "❌ Mesaj gönderilemedi.")
 
 # ================== BOT ÇALIŞTIR ==================
 if __name__ == "__main__":
