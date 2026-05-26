@@ -7,13 +7,13 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from datetime import datetime
 
 # ================== AYARLAR ==================
-TOKEN = os.getenv("TOKEN") or "8900271780:AAGJ--CtEgxPbQcMJ1mspBxbTd1ZZ3iH6p8"
-MINI_APP_URL = "https://www.porno80.net/"   
+TOKEN = os.getenv("TOKEN") or "8742453459:AAF5uZYvU7JcADdSDyTm7hbc2tZQnfc5oPo"
+MINI_APP_URL = "https://use.ai/tr"   
 
-CHANNEL_USERNAME = "@pxrno80duyuru"      
-GROUP_USERNAME = "@atattv44yedek"        
+CHANNEL_USERNAME = "@alonetools"      
+GROUP_USERNAME = "@atattv44vizyon"        
 
-ADMIN_IDS = [8064250098]             
+ADMIN_IDS = [8773299135, 8973632679, 8230461239]             
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -103,16 +103,16 @@ def start(message):
         return bot.send_message(message.chat.id, "❗ Botu kullanmak için **sohbet grubuna** da katılmalısın!", reply_markup=markup, parse_mode='Markdown')
 
     markup = InlineKeyboardMarkup(row_width=1)
-    markup.add(InlineKeyboardButton("🎥 Videoları Gör", callback_data="open_mini_app"))
+    markup.add(InlineKeyboardButton("🎥 yapay zeka kullan", callback_data="open_mini_app"))
     markup.add(InlineKeyboardButton("👤 Bilgilerim", callback_data="user_info"))
 
-    text = f"""🔥 **Porno Videoları Dünyasına Hoş Geldiniz!** 🔥
+    text = f"""🔥 **ALONE Aİ Dünyasına Hoş Geldiniz!** 🔥
 
 Merhaba {first_name}!
 
 ✅ Kanala ve gruba katıldığın için teşekkürler.
 
-👇 **Hemen izlemeye başlamak için** butona tıkla."""
+👇 **Hemen kullanmaya başlamak için** butona tıkla."""
 
     bot.send_message(message.chat.id, text, parse_mode='Markdown', reply_markup=markup)
 
