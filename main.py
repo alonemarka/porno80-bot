@@ -8,7 +8,7 @@ from datetime import datetime
 
 # ================== AYARLAR ==================
 TOKEN = os.getenv("TOKEN") or "8742453459:AAF5uZYvU7JcADdSDyTm7hbc2tZQnfc5oPo"
-MINI_APP_URL = "https://use.ai/tr"
+MINI_APP_URL = "https://aloneai.gt.tc/"
 CHANNEL_USERNAME = "@alonetools"
 GROUP_USERNAME = "@atattv44vizyon"
 ADMIN_IDS = [8773299135, 8973632679, 8230461239]
